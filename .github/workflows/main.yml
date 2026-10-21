@@ -1,0 +1,52 @@
+
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/main.yml'
+      - 'TamweenatAlArd_Approved_Project.zip'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extract project
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          unzip -q TamweenatAlArd_Approved_Project.zip -d extracted
+
+      - name: Build APK
+        run: |
+          GRADLEW=$(find extracted -type f -name gradlew | head -n 1)
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: Android Gradle project or gradlew not found in ZIP"
+            echo "The ZIP may contain HTML files or an incomplete Android project."
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TamweenatAlArd-APK
+          path: extracted/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
